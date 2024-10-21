@@ -82,6 +82,27 @@ class GraphList(BaseModel):
     graphs: list[Graph]
 
 
+class Summary(BaseModel):
+    """Describe a single metric summary
+
+    This represents a JSON object provided by a caller through the get_summary
+    API to describe a specific metric.
+
+    Fields:
+        run: the run ID to query
+        metric: the metric label, "ilab::train-samples-sec"
+        aggregate: True to aggregate unspecified breakouts
+        names: Lock in breakouts
+        periods: Select metrics for specific test period(s)
+    """
+
+    run: str
+    metric: str
+    aggregate: bool = False
+    names: Optional[list[str]] = None
+    periods: Optional[list[str]] = None
+
+
 @dataclass
 class Point:
     """Graph point
@@ -433,7 +454,10 @@ class CrucibleService:
     @staticmethod
     def _format_timestamp(timestamp: Union[str, int]) -> str:
         """Convert stringified integer milliseconds-from-epoch to ISO date"""
-        return str(datetime.fromtimestamp(int(timestamp) / 1000, timezone.utc))
+        try:
+            return str(datetime.fromtimestamp(int(timestamp) / 1000, timezone.utc))
+        except Exception:
+            return ""
 
     @classmethod
     def _format_data(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -1601,6 +1625,8 @@ class CrucibleService:
                 filters=filters,
                 aggregations={"duration": {"stats": {"field": "metric_data.duration"}}},
             )
+            if aggdur["aggregations"]["duration"]["count"] == 0:
+                raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"selected metric {metric!r} has no samples")
             interval = int(aggdur["aggregations"]["duration"]["min"])
             data = self.search(
                 index="metric_data",
@@ -1632,46 +1658,73 @@ class CrucibleService:
         return response
 
     def get_metrics_summary(
-        self,
-        run: str,
-        metric: str,
-        names: Optional[list[str]] = None,
-        periods: Optional[list[str]] = None,
-    ) -> dict[str, Any]:
+        self, summaries: list[Summary]
+    ) -> list[dict[str, Any]]:
         """Return a statistical summary of metric data
 
         Provides a statistical summary of selected data samples.
 
         Args:
-            run: run ID
-            metric: metric label (e.g., "mpstat::Busy-CPU")
-            names: list of name filters ("cpu=3")
-            periods: list of period IDs
+            summaries: list of Summary objects to define desired metrics
 
         Returns:
             A statistical summary of the selected metric data
 
+        [
             {
-                "count": 71,
+                "count": 20,
                 "min": 0.0,
-                "max": 0.3296,
-                "avg": 0.02360704225352113,
-                "sum": 1.676self.BIGQUERY00000001
+                "max": 188.27,
+                "avg": 13.4535,
+                "sum": 269.07,
+                "aggregate": false,
+                "run": "f542a50c-55df-4ead-92d1-8c55367f2e79",
+                "metric": "iostat::operations-merged-sec",
+                "names": ["dev=sdc1"],
+                "periods": null
+            },
+            {
+                "count": 1625,
+                "min": 0.0,
+                "max": 375.4,
+                "avg": 2.364492307692308,
+                "sum": 3842.3,
+                "aggregate": true,
+                "run": "26ad48c1-fc9c-404d-bccf-d19755ca8a39",
+                "metric": "iostat::operations-merged-sec",
+                "names": null,
+                "periods": null
             }
+        ]
         """
         start = time.time()
-        ids = self._get_metric_ids(run, metric, names, periodlist=periods)
-        filters = [{"terms": {"metric_desc.id": ids}}]
-        filters.extend(self._build_timestamp_range_filters(periods))
-        data = self.search(
-            "metric_data",
-            size=0,
-            filters=filters,
-            aggregations={"score": {"stats": {"field": "metric_data.value"}}},
-        )
+        results = []
+        for summary in summaries:
+            ids = self._get_metric_ids(
+                summary.run,
+                summary.metric,
+                summary.names,
+                periodlist=summary.periods,
+                aggregate=summary.aggregate,
+            )
+            filters = [{"terms": {"metric_desc.id": ids}}]
+            filters.extend(self._build_timestamp_range_filters(summary.periods))
+            data = self.search(
+                "metric_data",
+                size=0,
+                filters=filters,
+                aggregations={"score": {"stats": {"field": "metric_data.value"}}},
+            )
+            score = data["aggregations"]["score"]
+            score["aggregate"] = summary.aggregate
+            score["metric"] = summary.metric
+            score["names"] = summary.names
+            score["periods"] = summary.periods
+            score["run"] = summary.run
+            results.append(score)
         duration = time.time() - start
         print(f"Processing took {duration} seconds")
-        return data["aggregations"]["score"]
+        return results
 
     def _graph_title(
         self,
@@ -1868,6 +1921,8 @@ class CrucibleService:
                         "duration": {"stats": {"field": "metric_data.duration"}}
                     },
                 )
+                if aggdur["aggregations"]["duration"]["count"] == 0:
+                    raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"selected metric {metric!r} has no samples")
                 interval = int(aggdur["aggregations"]["duration"]["min"])
                 data = self.search(
                     index="metric_data",

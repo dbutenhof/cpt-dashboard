@@ -10,7 +10,7 @@ from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.services.crucible_svc import CrucibleService, Graph, GraphList
+from app.services.crucible_svc import CrucibleService, Graph, GraphList, Summary
 
 router = APIRouter()
 
@@ -551,6 +551,48 @@ async def metric_data(
     )
 
 
+@router.post(
+    "/api/v1/ilab/runs/multisummary",
+    summary="Returns metric data summaries",
+    description="Returns a statistical summary of metric data",
+    responses={
+        200: example_response(
+            [
+                {
+                    "count": 16395,
+                    "min": 0.0,
+                    "max": 0.9973,
+                    "avg": 0.06873701738334859,
+                    "sum": 1126.9434,
+                    "aggregate": False,
+                    "run": "26ad48c1-fc9c-404d-bccf-d19755ca8a39",
+                    "metric": "mpstat::Busy-CPU",
+                    "names": ["type=usr"],
+                    "periods": None,
+                }
+            ]
+        ),
+        400: example_error("No matches for ilab::train-samples-sc+cpu=10"),
+        422: example_response(
+            response={
+                "detail": [
+                    {
+                        "message": "More than one metric (2) probably means you should add filters",
+                        "names": {"dev": ["sdb", "sdb3"]},
+                        "periods": [],
+                    }
+                ]
+            }
+        ),
+    },
+)
+async def metric_summary_body(
+    crucible: Annotated[CrucibleService, Depends(crucible_svc)],
+    summaries: list[Summary],
+):
+    return crucible.get_metrics_summary(summaries)
+
+
 @router.get(
     "/api/v1/ilab/runs/{run}/summary/{metric}",
     summary="Returns metric data collected for a run",
@@ -563,6 +605,11 @@ async def metric_data(
                 "max": 9.666444615077308,
                 "avg": 9.38298722585416,
                 "sum": 2195.6190108498736,
+                "aggregate": False,
+                "run": "26ad48c1-fc9c-404d-bccf-d19755ca8a39",
+                "metric": "mpstat::Busy-CPU",
+                "names": ["type=usr"],
+                "periods": None,
             }
         ),
         400: example_error("No matches for ilab::train-samples-sc+cpu=10"),
@@ -579,7 +626,7 @@ async def metric_data(
         ),
     },
 )
-async def metric_summary(
+async def metric_summary_param(
     crucible: Annotated[CrucibleService, Depends(crucible_svc)],
     run: str,
     metric: str,
@@ -597,8 +644,18 @@ async def metric_summary(
             examples=["<id>", "<id1>,<id2>"],
         ),
     ] = None,
+    aggregate: Annotated[
+        bool, Query(description="Allow aggregation of metrics")
+    ] = False,
 ):
-    return crucible.get_metrics_summary(run, metric, names=name, periods=period)
+    result = crucible.get_metrics_summary(
+        [
+            Summary(
+                run=run, metric=metric, aggregate=aggregate, names=name, periods=period
+            )
+        ]
+    )
+    return result[0] if isinstance(result, list) and len(result) == 1 else result
 
 
 @router.post(

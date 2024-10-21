@@ -9,6 +9,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 
 import ILabGraph from "./ILabGraph";
+import ILabSummary from "./ILabSummary";
 import MetaRow from "./MetaRow";
 import MetricsSelect from "./MetricsDropdown";
 import PropTypes from "prop-types";
@@ -134,9 +135,14 @@ const IlabRowContent = (props) => {
         >
           <div>Metrics:</div>
           <MetricsSelect item={item} />
-          <div className="graph-card">
-            <ILabGraph item={item} />
-          </div>
+          <>
+            <div className="summary-card">
+              <ILabSummary item={item} />
+            </div>
+            <div className="graph-card">
+              <ILabGraph item={item} />
+            </div>
+          </>
         </AccordionContent>
       </AccordionItem>
     </Accordion>

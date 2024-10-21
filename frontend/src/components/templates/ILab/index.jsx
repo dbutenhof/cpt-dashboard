@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import IlabCompareComponent from "./IlabCompareComponent";
+import ILabSummary from "./ILabSummary";
 import IlabRowContent from "./IlabExpandedRow";
 import RenderPagination from "@/components/organisms/Pagination";
 import StatusCell from "./StatusCell";

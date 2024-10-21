@@ -121,6 +121,49 @@ export const fetchPeriods = (uid) => async (dispatch) => {
   dispatch({ type: TYPES.COMPLETED });
 };
 
+export const fetchSummaryData =
+  (uid, metric = null) => async (dispatch, getState) => {
+    try {
+      const periods = getState().ilab.periods.find((i) => i.uid == uid);
+      const summaryData = getState().ilab.summaryData;
+
+      // remove this run's entry if it exists; we'll replace it
+      const filterData = summaryData.filter((i) => i.uid !== uid);
+      dispatch({ type: TYPES.SET_ILAB_SUMMARY_LOADING });
+      let summaries = [];
+      periods?.periods?.forEach((p) => {
+        summaries.push({ run: uid, metric: p.primary_metric, periods: [p.id] });
+        if (metric) {
+          summaries.push({
+            run: uid,
+            metric,
+            aggregate: true,
+            periods: [p.id],
+          });
+        }
+      });
+      const response = await API.post(`/api/v1/ilab/runs/multisummary`, summaries);
+      if (response.status === 200) {
+        filterData.push({
+          uid,
+          data: response.data,
+        });
+        dispatch({
+          type: TYPES.SET_ILAB_SUMMARY_DATA,
+          payload: filterData,
+        });
+      }
+    } catch (error) {
+      console.error(
+        `ERROR (${error?.response?.status}): ${JSON.stringify(
+          error?.response?.data
+        )}`
+      );
+      dispatch(showFailureToast());
+    }
+    dispatch({ type: TYPES.SET_ILAB_SUMMARY_COMPLETE });
+  };
+
 export const fetchGraphData =
   (uid, metric = null) =>
   async (dispatch, getState) => {
