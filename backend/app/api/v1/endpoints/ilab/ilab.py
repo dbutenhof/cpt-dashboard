@@ -8,9 +8,8 @@ configuration path "ilab.crucible".
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-
-from app.services.crucible_svc import CrucibleService, Graph, GraphList, Summary
+from app.services.crucible_svc import CrucibleService, GraphList, Metric
+from fastapi import APIRouter, Depends, Query
 
 router = APIRouter()
 
@@ -569,6 +568,7 @@ async def metric_data(
                     "metric": "mpstat::Busy-CPU",
                     "names": ["type=usr"],
                     "periods": None,
+                    "title": "mpstat::Busy-CPU [type=usr] {run 1}",
                 }
             ]
         ),
@@ -588,7 +588,7 @@ async def metric_data(
 )
 async def metric_summary_body(
     crucible: Annotated[CrucibleService, Depends(crucible_svc)],
-    summaries: list[Summary],
+    summaries: list[Metric],
 ):
     return crucible.get_metrics_summary(summaries)
 
@@ -650,7 +650,7 @@ async def metric_summary_param(
 ):
     result = crucible.get_metrics_summary(
         [
-            Summary(
+            Metric(
                 run=run, metric=metric, aggregate=aggregate, names=name, periods=period
             )
         ]
@@ -807,10 +807,10 @@ async def metric_graph_param(
 ):
     return crucible.get_metrics_graph(
         GraphList(
-            run=run,
             name=metric,
             graphs=[
-                Graph(
+                Metric(
+                    run=run,
                     metric=metric,
                     aggregate=aggregate,
                     names=name,

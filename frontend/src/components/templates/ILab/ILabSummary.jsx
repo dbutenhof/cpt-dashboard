@@ -21,21 +21,19 @@ const ILabSummary = (props) => {
     <>
       {hasSummaryData(item.id) ? (
         <>
-          <Table className="box" key={uid()} aria-label="summary-table">
+          <Table className="box" key={uid()} aria-label="summary-table" isStriped>
             <Thead>
               <Tr>
-                <Th width={20} style={{ textAlign: "left" }}>
-                  Metric
-                </Th>
-                <Th width={20}>Min</Th>
-                <Th width={20}>Average</Th>
-                <Th width={20}>Max</Th>
+                <Th>Metric</Th>
+                <Th>Min</Th>
+                <Th>Average</Th>
+                <Th>Max</Th>
               </Tr>
             </Thead>
             <Tbody>
               {getSummaryData(item.id).data.map((stat) => (
                 <Tr key={uid()}>
-                  <Td>{stat.metric}</Td>
+                  <Td>{stat.title}</Td>
                   <Td>{stat.min}</Td>
                   <Td>{stat.avg}</Td>
                   <Td>{stat.max}</Td>

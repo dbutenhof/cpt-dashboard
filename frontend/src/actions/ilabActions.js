@@ -179,9 +179,10 @@ export const fetchGraphData =
       dispatch({ type: TYPES.GRAPH_LOADING });
       let graphs = [];
       periods?.periods?.forEach((p) => {
-        graphs.push({ metric: p.primary_metric, periods: [p.id] });
+        graphs.push({ run: uid, metric: p.primary_metric, periods: [p.id] });
         if (metric) {
           graphs.push({
+            run: uid,
             metric,
             aggregate: true,
             periods: [p.id],
@@ -189,7 +190,6 @@ export const fetchGraphData =
         }
       });
       const response = await API.post(`/api/v1/ilab/runs/multigraph`, {
-        run: uid,
         name: `graph ${uid}`,
         graphs,
       });
