@@ -69,7 +69,13 @@ const ILabReducer = (state = initialState, action = {}) => {
     case TYPES.SET_ILAB_SUMMARY_COMPLETE:
       return { ...state, isSummaryLoading: false };
     case TYPES.SET_ILAB_SUMMARY_DATA:
-      return { ...state, summaryData: payload };
+      return {
+        ...state,
+        summaryData: [
+          ...state.summaryData.filter((i) => i.uid !== payload.uid),
+          payload,
+        ],
+      };
     default:
       return state;
   }

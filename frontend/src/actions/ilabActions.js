@@ -122,13 +122,11 @@ export const fetchPeriods = (uid) => async (dispatch) => {
 };
 
 export const fetchSummaryData =
-  (uid, metric = null) => async (dispatch, getState) => {
+  (uid, metric = null) =>
+  async (dispatch, getState) => {
     try {
       const periods = getState().ilab.periods.find((i) => i.uid == uid);
       const summaryData = getState().ilab.summaryData;
-
-      // remove this run's entry if it exists; we'll replace it
-      const filterData = summaryData.filter((i) => i.uid !== uid);
       dispatch({ type: TYPES.SET_ILAB_SUMMARY_LOADING });
       let summaries = [];
       periods?.periods?.forEach((p) => {
@@ -142,15 +140,14 @@ export const fetchSummaryData =
           });
         }
       });
-      const response = await API.post(`/api/v1/ilab/runs/multisummary`, summaries);
+      const response = await API.post(
+        `/api/v1/ilab/runs/multisummary`,
+        summaries
+      );
       if (response.status === 200) {
-        filterData.push({
-          uid,
-          data: response.data,
-        });
         dispatch({
           type: TYPES.SET_ILAB_SUMMARY_DATA,
-          payload: filterData,
+          payload: { uid, data: response.data },
         });
       }
     } catch (error) {
@@ -162,6 +159,34 @@ export const fetchSummaryData =
       dispatch(showFailureToast());
     }
     dispatch({ type: TYPES.SET_ILAB_SUMMARY_COMPLETE });
+  };
+
+export const handleSummaryData =
+  (uids, metric = null) =>
+  async (dispatch, getState) => {
+    try {
+      const periods = getState().ilab.periods;
+      const pUids = periods.map((i) => i.uid);
+      const missingPeriods = uids.filter(function (x) {
+        return pUids.indexOf(x) < 0;
+      });
+      console.log(`Missing periods for ${missingPeriods}`);
+      await Promise.all(
+        missingPeriods.map(async (uid) => {
+          console.log(`Fetching periods for ${uid}`);
+          await dispatch(fetchPeriods(uid)); // Dispatch each item
+        })
+      );
+      await Promise.all(
+        uids.map(async (uid) => {
+          console.log(`Fetching summary data for ${uid}`);
+          await dispatch(fetchSummaryData(uid, metric));
+        })
+      );
+    } catch (error) {
+      console.error(`ERROR: ${JSON.stringify(error)}`);
+      dispatch(showFailureToast());
+    }
   };
 
 export const fetchGraphData =

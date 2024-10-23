@@ -2,6 +2,8 @@ import "./index.less";
 
 import {
   Button,
+  Flex,
+  FlexItem,
   Menu,
   MenuContent,
   MenuItem,
@@ -16,9 +18,10 @@ import Plot from "react-plotly.js";
 import PropTypes from "prop-types";
 import RenderPagination from "@/components/organisms/Pagination";
 import { cloneDeep } from "lodash";
-import { handleMultiGraph } from "@/actions/ilabActions.js";
+import { handleMultiGraph, handleSummaryData } from "@/actions/ilabActions.js";
 import { uid } from "@/utils/helper";
 import { useState } from "react";
+import ILabSummary from "./ILabSummary";
 
 const IlabCompareComponent = () => {
   // const { data } = props;
@@ -27,7 +30,9 @@ const IlabCompareComponent = () => {
   );
   const dispatch = useDispatch();
   const [selectedItems, setSelectedItems] = useState([]);
-  const { multiGraphData } = useSelector((state) => state.ilab);
+  const { multiGraphData, summaryData, isSummaryLoading } = useSelector(
+    (state) => state.ilab
+  );
   const isGraphLoading = useSelector((state) => state.loading.isGraphLoading);
   const graphDataCopy = cloneDeep(multiGraphData);
 
@@ -39,8 +44,9 @@ const IlabCompareComponent = () => {
       setSelectedItems([...selectedItems, item]);
     }
   };
-  const dummy = () => {
-    dispatch(handleMultiGraph(selectedItems));
+  const dummy = async () => {
+    await dispatch(handleSummaryData(selectedItems));
+    await dispatch(handleMultiGraph(selectedItems));
   };
   return (
     <div className="comparison-container">
@@ -91,22 +97,32 @@ const IlabCompareComponent = () => {
           type={"ilab"}
         />
       </div>
-      <div className="chart-container">
-        {isGraphLoading ? (
-          <div className="loader"></div>
-        ) : graphDataCopy?.length > 0 &&
-          graphDataCopy?.[0]?.data?.length > 0 ? (
-          <div className="chart-box">
+      <Flex>
+        <FlexItem span={12} className="summary-box">
+          {isSummaryLoading ? (
+            <div className="loader"></div>
+          ) : summaryData.filter((i) => selectedItems.includes(i.uid)).length ==
+            selectedItems.length ? (
+            <ILabSummary ids={selectedItems} />
+          ) : (
+            <div>No data to summarize</div>
+          )}
+        </FlexItem>
+        <FlexItem span={12} className="chart-box">
+          {isGraphLoading ? (
+            <div className="loader"></div>
+          ) : graphDataCopy?.length > 0 &&
+            graphDataCopy?.[0]?.data?.length > 0 ? (
             <Plot
               data={graphDataCopy[0]?.data}
               layout={graphDataCopy[0]?.layout}
               key={uid()}
             />
-          </div>
-        ) : (
-          <div>No data to compare</div>
-        )}
-      </div>
+          ) : (
+            <div>No data to compare</div>
+          )}
+        </FlexItem>
+      </Flex>
     </div>
   );
 };

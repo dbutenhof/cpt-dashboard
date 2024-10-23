@@ -1,29 +1,46 @@
 import PropType from "prop-types";
 import { uid } from "@/utils/helper";
 import { useSelector } from "react-redux";
-import { Table, Tbody, Th, Thead, Tr, Td } from "@patternfly/react-table";
-import { Title } from "@patternfly/react-core";
+import {
+  Caption,
+  Table,
+  Tbody,
+  Th,
+  Thead,
+  Tr,
+  Td,
+} from "@patternfly/react-table";
 
 const ILabSummary = (props) => {
-  const { item } = props;
+  const { ids } = props;
   const { isSummaryLoading, summaryData } = useSelector((state) => state.ilab);
 
   const getSummaryData = (id) => {
     const data = summaryData?.find((a) => a.uid === id);
     return data;
   };
-  const hasSummaryData = (id) => {
-    const hasData = Boolean(getSummaryData(id) !== undefined);
+  const hasSummaryData = (ids) => {
+    const hasData = Boolean(
+      summaryData.filter((i) => ids.includes(i.uid)).length === ids.length
+    );
     return hasData;
   };
 
   return (
     <>
-      {hasSummaryData(item.id) ? (
+      {hasSummaryData(ids) ? (
         <>
-          <Table className="box" key={uid()} aria-label="summary-table" isStriped>
+          <Table
+            variant={"compact"}
+            hasNoInset
+            className="box"
+            key={uid()}
+            aria-label="summary-table"
+            isStriped
+          >
             <Thead>
               <Tr>
+                {ids.length > 1 ? <Th>Run</Th> : <></>}
                 <Th>Metric</Th>
                 <Th>Min</Th>
                 <Th>Average</Th>
@@ -31,18 +48,21 @@ const ILabSummary = (props) => {
               </Tr>
             </Thead>
             <Tbody>
-              {getSummaryData(item.id).data.map((stat) => (
-                <Tr key={uid()}>
-                  <Td>{stat.title}</Td>
-                  <Td>{stat.min}</Td>
-                  <Td>{stat.avg}</Td>
-                  <Td>{stat.max}</Td>
-                </Tr>
-              ))}
+              {ids.map((id, idx) =>
+                getSummaryData(id).data.map((stat) => (
+                  <Tr key={uid()}>
+                    {ids.length > 1 ? <Td>{idx + 1}</Td> : <></>}
+                    <Td>{stat.title}</Td>
+                    <Td>{stat.min.toPrecision(6)}</Td>
+                    <Td>{stat.avg.toPrecision(6)}</Td>
+                    <Td>{stat.max.toPrecision(6)}</Td>
+                  </Tr>
+                ))
+              )}
             </Tbody>
           </Table>
         </>
-      ) : isSummaryLoading && !hasSummaryData(item.id) ? (
+      ) : isSummaryLoading && !hasSummaryData(ids) ? (
         <div className="loader"></div>
       ) : (
         <></>

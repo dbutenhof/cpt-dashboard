@@ -137,7 +137,7 @@ const IlabRowContent = (props) => {
           <MetricsSelect item={item} />
           <>
             <div className="summary-card">
-              <ILabSummary item={item} />
+              <ILabSummary ids={[item.id]} />
             </div>
             <div className="graph-card">
               <ILabGraph item={item} />
