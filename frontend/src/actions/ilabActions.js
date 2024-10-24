@@ -219,6 +219,15 @@ export const fetchGraphData =
         graphs,
       });
       if (response.status === 200) {
+        response.data.layout["showlegend"] = true;
+        response.data.layout["responsive"] = "true";
+        response.data.layout["autosize"] = "true";
+        response.data.layout["legend"] = {
+          orientation: "h",
+          xanchor: "left",
+          yanchor: "top",
+          y: -0.1,
+        };
         copyData.push({
           uid,
           data: response.data.data,
@@ -298,7 +307,11 @@ export const fetchMultiGraphData = (uids) => async (dispatch, getState) => {
       response.data.layout["showlegend"] = true;
       response.data.layout["responsive"] = "true";
       response.data.layout["autosize"] = "true";
-      response.data.layout["legend"] = { x: 0, y: 1.5 };
+      response.data.layout["legend"] = {
+        orientation: "h",
+        xanchor: "left",
+        yanchor: "top",
+      };
       const graphData = [];
       graphData.push({
         data: response.data.data,

@@ -2,13 +2,13 @@ import "./index.less";
 
 import {
   Button,
-  Flex,
-  FlexItem,
   Menu,
   MenuContent,
   MenuItem,
   MenuItemAction,
   MenuList,
+  Stack,
+  StackItem,
   Title,
 } from "@patternfly/react-core";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,6 +22,7 @@ import { handleMultiGraph, handleSummaryData } from "@/actions/ilabActions.js";
 import { uid } from "@/utils/helper";
 import { useState } from "react";
 import ILabSummary from "./ILabSummary";
+import ILabMetadata from "./ILabMetadata";
 
 const IlabCompareComponent = () => {
   // const { data } = props;
@@ -76,7 +77,9 @@ const IlabCompareComponent = () => {
                       <MenuItemAction
                         icon={<InfoCircleIcon aria-hidden />}
                         actionId="code"
-                        onClick={() => console.log("clicked on code icon")}
+                        onMouseOver={() => {
+                          console.log("hover");
+                        }}
                         aria-label="Code"
                       />
                     }
@@ -97,8 +100,8 @@ const IlabCompareComponent = () => {
           type={"ilab"}
         />
       </div>
-      <Flex>
-        <FlexItem span={12} className="summary-box">
+      <Stack>
+        <StackItem span={12} className="summary-box">
           {isSummaryLoading ? (
             <div className="loader"></div>
           ) : summaryData.filter((i) => selectedItems.includes(i.uid)).length ==
@@ -107,8 +110,8 @@ const IlabCompareComponent = () => {
           ) : (
             <div>No data to summarize</div>
           )}
-        </FlexItem>
-        <FlexItem span={12} className="chart-box">
+        </StackItem>
+        <StackItem span={12} className="chart-box">
           {isGraphLoading ? (
             <div className="loader"></div>
           ) : graphDataCopy?.length > 0 &&
@@ -121,8 +124,8 @@ const IlabCompareComponent = () => {
           ) : (
             <div>No data to compare</div>
           )}
-        </FlexItem>
-      </Flex>
+        </StackItem>
+      </Stack>
     </div>
   );
 };
