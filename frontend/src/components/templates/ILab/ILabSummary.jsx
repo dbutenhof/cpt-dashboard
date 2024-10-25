@@ -23,11 +23,9 @@ const ILabSummary = (props) => {
       {hasSummaryData(ids) ? (
         <Table
           variant="compact"
-          hasNoInset
           className="box"
           key={uid()}
           aria-label="summary-table"
-          isStriped
         >
           <Thead>
             <Tr>
@@ -40,9 +38,15 @@ const ILabSummary = (props) => {
           </Thead>
           <Tbody>
             {ids.map((id, ridx) =>
-              getSummaryData(id).data.map((stat) => (
-                <Tr key={uid()}>
-                  {ids.length > 1 ? <Td>{ridx + 1}</Td> : <></>}
+              getSummaryData(id).data.map((stat, sidx) => (
+                <Tr
+                  hasNoInset
+                  key={uid()}
+                  {...(ridx % 2 === 0 && { isStriped: true })}
+                >
+                  {ids.length > 1 && sidx === 0 ? (
+                    <Td rowSpan={getSummaryData(id).data.length}>{ridx + 1}</Td>
+                  ) : undefined}
                   <Td>{stat.title}</Td>
                   <Td>{stat.min.toPrecision(6)}</Td>
                   <Td>{stat.avg.toPrecision(6)}</Td>

@@ -6,8 +6,8 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionToggle,
-  Card,
-  CardBody,
+  Grid,
+  GridItem,
 } from "@patternfly/react-core";
 import { Table, Tbody, Th, Thead, Tr, Td } from "@patternfly/react-table";
 import { setMetaRowExpanded } from "@/actions/ilabActions";
@@ -32,93 +32,90 @@ const ILabMetadata = (props) => {
   };
 
   return (
-    <div className="metadata-wrapper">
-      <Card className="metadata-card" isCompact>
-        <CardBody>
-          <MetaRow
-            key={uid()}
-            heading={"Fields"}
-            metadata={[
-              ["benchmark", item.benchmark],
-              ["name", item.name],
-              ["email", item.email],
-              ["source", item.source],
-            ]}
-          />
-        </CardBody>
-      </Card>
-      <Card className="metadata-card" isCompact>
-        <CardBody>
-          <MetaRow
-            key={uid()}
-            heading={"Tags"}
-            metadata={Object.entries(item.tags)}
-          />
-        </CardBody>
-      </Card>
-      <Card className="metadata-card" isCompact>
-        <CardBody>
-          <MetaRow
-            key={uid()}
-            heading={"Common Parameters"}
-            metadata={Object.entries(item.params)}
-          />
-          {item.iterations.length > 1 && (
-            <Accordion asDefinitionList={false} togglePosition="start">
-              <AccordionItem>
-                <AccordionToggle
-                  onClick={() => {
-                    onToggle(`iterations-toggle-${item.id}`);
-                  }}
-                  isExpanded={metaRowExpanded.includes(
-                    `iterations-toggle-${item.id}`
-                  )}
-                  id={`iterations-toggle-${item.id}`}
+    <Grid className="metadata-wrapper" isCompact hasGutter>
+      <GridItem className="metadata-card" span={4}>
+        <MetaRow
+          key={uid()}
+          heading={"Fields"}
+          metadata={[
+            ["benchmark", item.benchmark],
+            ["name", item.name],
+            ["email", item.email],
+            ["source", item.source],
+            ["start_date", Date(item.begin)],
+            ["end_date", Date(item.end)],
+            ["status", item.status],
+          ]}
+        />
+      </GridItem>
+      <GridItem className="metadata-card" span={4}>
+        <MetaRow
+          key={uid()}
+          heading={"Tags"}
+          metadata={Object.entries(item.tags)}
+        />
+      </GridItem>
+      <GridItem className="metadata-card" span={4}>
+        <MetaRow
+          key={uid()}
+          heading={"Common Parameters"}
+          metadata={Object.entries(item.params)}
+        />
+        {item.iterations.length > 1 && (
+          <Accordion asDefinitionList={false} togglePosition="start">
+            <AccordionItem>
+              <AccordionToggle
+                onClick={() => {
+                  onToggle(`iterations-toggle-${item.id}`);
+                }}
+                isExpanded={metaRowExpanded.includes(
+                  `iterations-toggle-${item.id}`
+                )}
+                id={`iterations-toggle-${item.id}`}
+              >
+                {`Unique parameters for ${item.iterations.length} Iterations`}
+              </AccordionToggle>
+              <AccordionContent
+                id={`iterations-${item.id}`}
+                isHidden={
+                  !metaRowExpanded.includes(`iterations-toggle-${item.id}`)
+                }
+              >
+                <Table
+                  variant="compact"
+                  hasNoInset
+                  className="box"
+                  key={uid()}
+                  aria-label="metadata-table"
+                  isStriped
                 >
-                  {`Unique parameters for ${item.iterations.length} Iterations`}
-                </AccordionToggle>
-                <AccordionContent
-                  id={`iterations-${item.id}`}
-                  isHidden={
-                    !metaRowExpanded.includes(`iterations-toggle-${item.id}`)
-                  }
-                >
-                  <Table
-                    variant="compact"
-                    hasNoInset
-                    className="box"
-                    key={uid()}
-                    aria-label="metadata-table"
-                    isStriped
-                  >
-                    <Thead>
-                      <Tr>
-                        <Th>Iteration</Th>
-                        <Th>Parameter</Th>
-                        <Th>Value</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {item.iterations.map((i) =>
-                        Object.entries(i.params)
-                          .filter((p) => !(p[0] in item.params))
-                          .map((p) => (
-                            <Tr>
-                              <Td>{i.iteration}</Td>
-                              <Td>{p[0]}</Td>
-                              <Td>{p[1]}</Td>
-                            </Tr>
-                          ))
-                      )}
-                    </Tbody>
-                  </Table>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          )}
-        </CardBody>
-      </Card>
-    </div>
+                  <Thead>
+                    <Tr>
+                      <Th>Iteration</Th>
+                      <Th>Parameter</Th>
+                      <Th>Value</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {item.iterations.map((i) =>
+                      Object.entries(i.params)
+                        .filter((p) => !(p[0] in item.params))
+                        .map((p) => (
+                          <Tr>
+                            <Td>{i.iteration}</Td>
+                            <Td>{p[0]}</Td>
+                            <Td>{p[1]}</Td>
+                          </Tr>
+                        ))
+                    )}
+                  </Tbody>
+                </Table>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
+      </GridItem>
+    </Grid>
   );
 };
 
