@@ -6,8 +6,8 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionToggle,
-  Grid,
-  GridItem,
+  Split,
+  SplitItem,
 } from "@patternfly/react-core";
 import { Table, Tbody, Th, Thead, Tr, Td } from "@patternfly/react-table";
 import { setMetaRowExpanded } from "@/actions/ilabActions";
@@ -32,8 +32,8 @@ const ILabMetadata = (props) => {
   };
 
   return (
-    <Grid className="metadata-wrapper" isCompact hasGutter>
-      <GridItem className="metadata-card" span={4}>
+    <Split className="metadata-wrapper" hasGutter>
+      <SplitItem className="metadata-card" span={4}>
         <MetaRow
           key={uid()}
           heading={"Fields"}
@@ -42,20 +42,20 @@ const ILabMetadata = (props) => {
             ["name", item.name],
             ["email", item.email],
             ["source", item.source],
-            ["start_date", Date(item.begin)],
-            ["end_date", Date(item.end)],
+            ["start_date", (new Date(item.begin)).toLocaleString()],
+            ["end_date", (new Date(item.end)).toLocaleString()],
             ["status", item.status],
           ]}
         />
-      </GridItem>
-      <GridItem className="metadata-card" span={4}>
+      </SplitItem>
+      <SplitItem className="metadata-card" span={4}>
         <MetaRow
           key={uid()}
           heading={"Tags"}
           metadata={Object.entries(item.tags)}
         />
-      </GridItem>
-      <GridItem className="metadata-card" span={4}>
+      </SplitItem>
+      <SplitItem className="metadata-card" span={4}>
         <MetaRow
           key={uid()}
           heading={"Common Parameters"}
@@ -114,8 +114,8 @@ const ILabMetadata = (props) => {
             </AccordionItem>
           </Accordion>
         )}
-      </GridItem>
-    </Grid>
+      </SplitItem>
+    </Split>
   );
 };
 

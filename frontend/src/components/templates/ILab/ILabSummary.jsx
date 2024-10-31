@@ -34,6 +34,7 @@ const ILabSummary = (props) => {
               <Th>Min</Th>
               <Th>Average</Th>
               <Th>Max</Th>
+              <Th>Standard Deviation</Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -48,9 +49,26 @@ const ILabSummary = (props) => {
                     <Td rowSpan={getSummaryData(id).data.length}>{ridx + 1}</Td>
                   ) : undefined}
                   <Td>{stat.title}</Td>
-                  <Td>{stat.min.toPrecision(6)}</Td>
-                  <Td>{stat.avg.toPrecision(6)}</Td>
-                  <Td>{stat.max.toPrecision(6)}</Td>
+                  <Td>
+                    {typeof stat.min === "number"
+                      ? stat.min.toPrecision(6)
+                      : stat.min}
+                  </Td>
+                  <Td>
+                    {typeof stat.avg === "number"
+                      ? stat.avg.toPrecision(6)
+                      : stat.avg}
+                  </Td>
+                  <Td>
+                    {typeof stat.max === "number"
+                      ? stat.max.toPrecision(6)
+                      : stat.max}
+                  </Td>
+                  <Td>
+                    {typeof stat.std_deviation === "number"
+                      ? stat.std_deviation.toPrecision(6)
+                      : stat.std_deviation}
+                  </Td>
                 </Tr>
               ))
             )}

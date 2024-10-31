@@ -89,7 +89,7 @@ export const fetchMetricsInfo = (uid) => async (dispatch) => {
       ) {
         dispatch({
           type: TYPES.SET_ILAB_METRICS,
-          payload: { uid, metrics: Object.keys(response.data) },
+          payload: { uid, metrics: Object.keys(response.data).sort() },
         });
       }
     }

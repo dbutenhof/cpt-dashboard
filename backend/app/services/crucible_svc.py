@@ -774,13 +774,8 @@ class CrucibleService:
             ignore_unavailable=True,
         )
         if len(metrics["hits"]["hits"]) < 1:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                (
-                    f"No matches for {metric}"
-                    f"{('+' + ','.join(namelist) if namelist else '')}"
-                ),
-            )
+            print(f"No metric descs: filters={filters}")
+            return []
         ids = [h["metric_desc"]["id"] for h in self._hits(metrics)]
         if len(ids) < 2 or aggregate:
             return ids
@@ -824,11 +819,20 @@ class CrucibleService:
             Constructs a range filter for the earliest begin timestamp and the
             latest end timestamp among the specified periods.
         """
+
         if periods:
             ps = self._split_list(periods)
             matches = self.search("period", filters=[{"terms": {"period.id": ps}}])
-            start = min([int(h) for h in self._hits(matches, ["period", "begin"])])
-            end = max([int(h) for h in self._hits(matches, ["period", "end"])])
+            try:
+                start = min([int(h) for h in self._hits(matches, ["period", "begin"])])
+                end = max([int(h) for h in self._hits(matches, ["period", "end"])])
+            except Exception as e:
+                print(
+                    f"At least one of periods in {ps} lacks a begin or end "
+                    f"timestamp ({str(e)!r}): date filtering by period is "
+                    "disabled, which may produce bad results."
+                )
+                return []
             return [
                 {"range": {"metric_data.begin": {"gte": str(start)}}},
                 {"range": {"metric_data.end": {"lte": str(end)}}},
@@ -910,6 +914,7 @@ class CrucibleService:
             run_id: the Crucible run ID
             run_id_list: ordered list of run IDs in our list of metrics
             metric_item: the current MetricItem object
+            periods: list of aggregation periods, if any
             params_by_run: initially empty dict used to cache parameters
             periods_by_run: initially empty dict used to cache periods
 
@@ -918,6 +923,10 @@ class CrucibleService:
         """
         names = metric_item.names
         metric = metric_item.metric
+        if metric_item.periods and len(metric_item.periods) == 1:
+            period = metric_item.periods[0]
+        else:
+            period = None
         if run_id not in params_by_run:
             # Gather iteration parameters outside the loop for help in
             # generating useful labels.
@@ -931,9 +940,9 @@ class CrucibleService:
 
         if run_id not in periods_by_run:
             periods = self.search("period", filters=[{"term": {"run.id": run_id}}])
-            iteration_periods = defaultdict(set)
+            iteration_periods = defaultdict(list[dict[str, Any]])
             for p in self._hits(periods):
-                iteration_periods[p["iteration"]["id"]].add(p["period"]["id"])
+                iteration_periods[p["iteration"]["id"]].append(p["period"])
             periods_by_run[run_id] = iteration_periods
         else:
             iteration_periods = periods_by_run[run_id]
@@ -946,10 +955,13 @@ class CrucibleService:
         name_suffix = ""
         if metric_item.periods:
             iteration = None
-            for i, pset in iteration_periods.items():
-                if set(metric_item.periods) <= pset:
+            for i, plist in iteration_periods.items():
+                if set(metric_item.periods) <= set([p["id"] for p in plist]):
                     iteration = i
-                    break
+                if period:
+                    for p in plist:
+                        if p["id"] == period:
+                            name_suffix += f" {p['name']}"
 
             # If the period(s) we're graphing resolve to a single
             # iteration in a run with multiple iterations, then we can
@@ -963,7 +975,7 @@ class CrucibleService:
                             if p in params and unique[p] == params[p]:
                                 del unique[p]
                 if unique:
-                    name_suffix = (
+                    name_suffix += (
                         " (" + ",".join([f"{p}={v}" for p, v in unique.items()]) + ")"
                     )
 
@@ -1224,13 +1236,24 @@ class CrucibleService:
             if tag_filters and rid not in tagids:
                 continue
 
-            # Collect unique runs: the status is "fail" if any iteration for
-            # that run ID failed.
             runs[rid] = run
+
+            # Convert string timestamps (milliseconds from epoch) to int
+            try:
+                run["begin"] = int(run["begin"])
+                run["end"] = int(run["end"])
+            except Exception as e:
+                print(
+                    f"Unexpected error converting timestamp {run['begin']!r} "
+                    f"or {run['end']!r} to int: {str(e)!r}"
+                )
             run["tags"] = tags.get(rid, {})
             run["iterations"] = []
             run["primary_metrics"] = set()
             common = CommonParams()
+
+            # Collect unique iterations: the status is "fail" if any iteration
+            # for that run ID failed.
             for i in iterations.get(rid, []):
                 iparams = params.get(i["id"], {})
                 if "status" not in run:
@@ -1683,14 +1706,14 @@ class CrucibleService:
                 "metric_data",
                 size=0,
                 filters=filters,
-                aggregations={"duration": {"stats": {"field": "metric_data.duration"}}},
+                aggregations={"duration": {"min": {"field": "metric_data.duration"}}},
             )
             if aggdur["aggregations"]["duration"]["count"] == 0:
                 raise HTTPException(
                     status.HTTP_422_UNPROCESSABLE_ENTITY,
                     f"selected metric {metric!r} has no samples",
                 )
-            interval = int(aggdur["aggregations"]["duration"]["min"])
+            interval = int(aggdur["aggregations"]["duration"]["value"])
             data = self.search(
                 index="metric_data",
                 size=0,
@@ -1787,7 +1810,9 @@ class CrucibleService:
                 "metric_data",
                 size=0,
                 filters=filters,
-                aggregations={"score": {"stats": {"field": "metric_data.value"}}},
+                aggregations={
+                    "score": {"extended_stats": {"field": "metric_data.value"}}
+                },
             )
 
             # The caller can provide a title for each graph; but, if not, we
@@ -1800,6 +1825,7 @@ class CrucibleService:
                 title = self._make_title(
                     summary.run, run_id_list, summary, params_by_run, periods_by_run
                 )
+
             score = data["aggregations"]["score"]
             score["aggregate"] = summary.aggregate
             score["metric"] = summary.metric
