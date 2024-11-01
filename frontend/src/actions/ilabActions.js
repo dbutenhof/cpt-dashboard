@@ -130,7 +130,13 @@ export const fetchSummaryData =
       dispatch({ type: TYPES.SET_ILAB_SUMMARY_LOADING });
       let summaries = [];
       periods?.periods?.forEach((p) => {
-        summaries.push({ run: uid, metric: p.primary_metric, periods: [p.id] });
+        if (p.is_primary) {
+          summaries.push({
+            run: uid,
+            metric: p.primary_metric,
+            periods: [p.id],
+          });
+        }
         if (metric) {
           summaries.push({
             run: uid,
@@ -204,7 +210,9 @@ export const fetchGraphData =
       dispatch({ type: TYPES.GRAPH_LOADING });
       let graphs = [];
       periods?.periods?.forEach((p) => {
-        graphs.push({ run: uid, metric: p.primary_metric, periods: [p.id] });
+        if (p.is_primary) {
+          graphs.push({ run: uid, metric: p.primary_metric, periods: [p.id] });
+        }
         if (metric) {
           graphs.push({
             run: uid,
@@ -284,11 +292,13 @@ export const fetchMultiGraphData = (uids) => async (dispatch, getState) => {
     uids.forEach(async (uid) => {
       const periods = filterPeriods.find((i) => i.uid == uid);
       periods?.periods?.forEach((p) => {
-        graphs.push({
-          run: uid,
-          metric: p.primary_metric,
-          periods: [p.id],
-        });
+        if (p.is_primary) {
+          graphs.push({
+            run: uid,
+            metric: p.primary_metric,
+            periods: [p.id],
+          });
+        }
         // graphs.push({
         //   run: uid,
         //   metric,

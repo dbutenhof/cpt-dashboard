@@ -1370,14 +1370,27 @@ class CrucibleService:
         Returns:
             A list of iteration documents
         """
-        iterations = self.search(
+        hits = self.search(
             index="iteration",
             filters=[{"term": {"run.id": run}}],
             sort=[{"iteration.num": "asc"}],
             **kwargs,
             ignore_unavailable=True,
         )
-        return [i["iteration"] for i in self._hits(iterations)]
+
+        iterations = []
+        for i in self._hits(hits, ["iteration"]):
+            iterations.append(
+                {
+                    "id": i["id"],
+                    "num": i["num"],
+                    "path": i["path"],
+                    "primary_metric": i["primary-metric"],
+                    "primary_period": i["primary-period"],
+                    "status": i["status"],
+                }
+            )
+        return iterations
 
     def get_samples(
         self, run: Optional[str] = None, iteration: Optional[str] = None, **kwargs
@@ -1410,6 +1423,7 @@ class CrucibleService:
             sample = s["sample"]
             sample["iteration"] = s["iteration"]["num"]
             sample["primary_metric"] = s["iteration"]["primary-metric"]
+            sample["primary_period"] = s["iteration"]["primary-period"]
             sample["status"] = s["iteration"]["status"]
             samples.append(sample)
         return samples
@@ -1460,7 +1474,10 @@ class CrucibleService:
             period = self._format_period(period=h["period"])
             period["iteration"] = h["iteration"]["num"]
             period["sample"] = h["sample"]["num"]
-            period["primary_metric"] = h["iteration"]["primary-metric"]
+            is_primary = h["iteration"]["primary-period"] == h["period"]["name"]
+            period["is_primary"] = is_primary
+            if is_primary:
+                period["primary_metric"] = h["iteration"]["primary-metric"]
             period["status"] = h["iteration"]["status"]
             body.append(period)
         return body
