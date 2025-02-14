@@ -62,7 +62,7 @@ export const fetchILabJobs =
       dispatch(showFailureToast());
     }
     dispatch({ type: TYPES.COMPLETED });
-    };
+  };
 
 /**
  * Isolate the current page of cached jobs.
@@ -79,7 +79,6 @@ export const sliceIlabTableRows =
       payload: results.slice(startIdx, endIdx),
     });
   };
-
 
 /**
  * Store the start & end date filters in redux and as URL
@@ -656,4 +655,27 @@ export const updateFromURL = (searchParams) => (dispatch, getState) => {
       );
     }
   }
+};
+
+/**
+ * Fetch and store Jira issues from backend.
+ */
+export const fetchJiraIssues = () => async (dispatch, getState) => {
+  try {
+    dispatch({ type: TYPES.LOADING });
+
+    /* Do we want to try to filter the Jira stories by date? Hmm. I
+      assume that's possible in JQL... */
+    const { start_date, end_date, size, offset, results } = getState().ilab;
+    const response = await API.get(API_ROUTES.ILAB_JIRA_API_V1);
+    if (response.status === 200) {
+      dispatch({
+        type: TYPES.SET_ILAB_JIRA_DATA,
+        payload: response.data,
+      });
+    }
+  } catch (error) {
+    dispatch(showFailureToast());
+  }
+  dispatch({ type: TYPES.COMPLETED });
 };

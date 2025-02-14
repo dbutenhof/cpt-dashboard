@@ -12,6 +12,7 @@ import {
 import {
   fetchIlabFilters,
   fetchILabJobs,
+  fetchJiraIssues,
   fetchGraphData,
   fetchMetricsInfo,
   fetchPeriods,
@@ -31,6 +32,8 @@ import IlabRowContent from "./IlabExpandedRow";
 import RenderPagination from "@/components/organisms/Pagination";
 import StatusCell from "./StatusCell";
 import TableFilter from "@/components/organisms/TableFilters";
+import JiraPanel from "./JiraBoard";
+import { Button, Modal } from "@patternfly/react-core";
 
 const ILab = () => {
   const dispatch = useDispatch();
@@ -47,7 +50,6 @@ const ILab = () => {
     totalItems,
   } = useSelector((state) => state.ilab);
   const [expandedResult, setExpandedResult] = useState([]);
-
   const isResultExpanded = (res) => expandedResult?.includes(res);
   const setExpanded = async (run, isExpanding = true) => {
     setExpandedResult((prevExpanded) => {
@@ -63,6 +65,14 @@ const ILab = () => {
         await dispatch(fetchGraphData(run.id)),
         await dispatch(fetchSummaryData(run.id)),
       ]);
+    }
+  };
+  const [isJiraOpen, setIsJiraOpen] = useState(false);
+
+  const toggleJira = () => {
+    setIsJiraOpen(!isJiraOpen);
+    if (isJiraOpen) {
+      dispatch(fetchJiraIssues());
     }
   };
 
@@ -120,6 +130,18 @@ const ILab = () => {
         isSwitchChecked={comparisonSwitch}
         onSwitchChange={onSwitchChange}
       />
+      <Button onClick={toggleJira} ouiaId="JiraModal">
+        Show Jira
+      </Button>
+      <Modal
+        isOpen={isJiraOpen}
+        onClose={toggleJira}
+        width="60%"
+        ouiaId="JiraModal"
+        title="Jira issues"
+      >
+        <JiraPanel />
+      </Modal>
       {comparisonSwitch ? (
         <IlabCompareComponent />
       ) : (

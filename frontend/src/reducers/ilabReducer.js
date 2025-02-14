@@ -21,6 +21,7 @@ const initialState = {
   tableData: [],
   comparisonSwitch: false,
   metaRowExpanded: [],
+  jira: [],
 };
 const ILabReducer = (state = initialState, action = {}) => {
   const { type, payload } = action;
@@ -82,6 +83,8 @@ const ILabReducer = (state = initialState, action = {}) => {
       return { ...state, runFilters: payload };
     case TYPES.SET_ILAB_METRIC_TEMPLATE:
       return { ...state, metricTemplate: payload };
+    case TYPES.SET_ILAB_JIRA_DATA:
+      return { ...state, jira: payload };
     default:
       return state;
   }

@@ -21,4 +21,3 @@ class JiraService:
             expand=expand,
             validate_query=validate_query
         )
-    

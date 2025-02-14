@@ -5,10 +5,13 @@ CPT runs via a persistent Crucuble controller instance as defined in the
 configuration path "ilab.crucible".
 """
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Optional
 
 from app.services.crucible_svc import CrucibleService, GraphList, Metric
+from app import config
+from app.services.jira_svc import JiraService
 from fastapi import APIRouter, Depends, Query
 
 router = APIRouter()
@@ -811,3 +814,110 @@ async def metric_graph_param(
             ],
         )
     )
+
+
+@router.get(
+    "/api/v1/ilab/jira",
+    summary="Jira status",
+    description="Returns Jira stories open for ILAB project(s).",
+    responses={
+        200: example_response(response={}),
+        400: example_error("Jira error"),
+    },
+)
+async def jira(
+    raw: Annotated[
+        bool, Query(description="Return (voluminous) raw Jira JSON")
+    ] = False,
+):
+
+    def subref(object: dict[Any, Any], *field: str, default=None) -> Any:
+        o = object
+        l = len(field) - 1
+        for i, f in enumerate(field):
+            if o is None:
+                break
+            if not isinstance(o, dict) and i < l:
+                print(
+                    f"From {object}, expect {'.'.join(field[:i+1])} ({type(o).__name__}) to be an object"
+                )
+                return None
+            o = o.get(f)
+        return default if o is None else o
+
+    def user(user: dict[str, str]) -> dict[str, str]:
+        return {
+            "display": subref(user, "displayName"),
+            "email": subref(user, "emailAddress"),
+        }
+
+    jira = JiraService("ilab.jira")
+    cfg = config.get_config()
+    projects = cfg.get("ilab.jira.projects").split(",")
+    custom_fields = jira.svc.get_all_fields()
+    custom_names = {
+        "Story Points": "story_points",
+        "Original story points": "original_story_points",
+    }
+    customs = {}
+    for f in custom_fields:
+        if f["name"] in custom_names:
+            customs[custom_names[f["name"]]] = f["id"]
+
+    result = jira.jql(
+        (
+            f"project in ({','.join(projects)}) AND issuetype in "
+            "(Story, Bug, Task) AND resolution = Unresolved "
+            "ORDER BY priority DESC, updated DESC"
+        )
+    )
+    print(f"Found {result['total']} Jira issues")
+
+    # Mostly for debugging, allow returning the full Jira response
+    if raw:
+        return result
+
+    issues = []
+    for i in result["issues"]:
+        f = i["fields"]
+        components = []
+        raw_components = subref(f, "components")
+        if raw_components:
+            for c in raw_components:
+                components.append(subref(c, "name"))
+        raw_comments = subref(f, "comment", "comments")
+        comments = []
+        if raw_comments:
+            for c in raw_comments:
+                comments.append(
+                    {
+                        "author": user(subref(c, "author")),
+                        "body": subref(c, "body"),
+                        "created": subref(c, "created"),
+                    }
+                )
+        issue = {
+            "name": i["key"],
+            "url": f"{jira.url}/browse/{i['key']}",
+            "created": subref(f, "created"),
+            "updated": subref(f, "updated"),
+            "priority": subref(f, "priority", "name"),
+            "labels": subref(f, "labels"),
+            "components": components,
+            "assignee": user(subref(f, "assignee")),
+            "status": subref(f, "status", "name"),
+            "creator": user(subref(f, "creator")),
+            "reporter": user(subref(f, "reporter")),
+            "type": subref(f, "issuetype", "name"),
+            "project": subref(f, "project", "name"),
+            "summary": subref(f, "summary"),
+            "description": subref(f, "description", default="").replace("\r", ""),
+            "comments": comments,
+        }
+
+        # Add the custom items we care about
+        for n, c in customs.items():
+            if c in f:
+                issue[n] = f[c]
+        issues.append(issue)
+    return issues

@@ -32,3 +32,4 @@ export const TELCO_GRAPH_API_V1 = "/api/v1/telco/graph";
 
 export const ILABS_JOBS_API_V1 = "/api/v1/ilab/runs";
 export const ILAB_GRAPH_API_V1 = "/api/v1/ilab/runs/";
+export const ILAB_JIRA_API_V1 = "/api/v1/ilab/jira";
